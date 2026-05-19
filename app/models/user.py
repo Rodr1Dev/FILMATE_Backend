@@ -67,3 +67,18 @@ class Usuario(Base):
         "Rol",
         back_populates="usuarios"
     )
+
+    favoritos = relationship(
+        "Favorito",
+        back_populates="usuario"
+    )
+
+    reservas = relationship(
+        "Reserva",
+        back_populates="usuario"
+    )
+
+    resenas = relationship(
+        "Resena",
+        back_populates="usuario"
+    )

@@ -1,4 +1,5 @@
 # backend/app/models/reservation.py
+from __future__ import annotations
 
 from sqlalchemy import (
     Column,

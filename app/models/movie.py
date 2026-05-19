@@ -66,7 +66,32 @@ class Pelicula(Base):
         server_default=func.now()
     )
 
+    generos = relationship(
+        "PeliculaGenero",
+        back_populates="pelicula"
+    )
+
+    actores = relationship(
+        "PeliculaActor",
+        back_populates="pelicula"
+    )
+
+    banners = relationship(
+        "BannerHome",
+        back_populates="pelicula"
+    )
+
+    funciones = relationship(
+        "Funcion",
+        back_populates="pelicula"
+    )
+
     resenas = relationship(
         "Resena",
+        back_populates="pelicula"
+    )
+
+    favoritos = relationship(
+        "Favorito",
         back_populates="pelicula"
     )
