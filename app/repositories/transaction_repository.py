@@ -311,6 +311,7 @@ def get_transaction_detail(
     snacks = []
 
     for rs, producto in snacks_query:
+        subtotal = float(rs.subtotal) if rs.subtotal is not None else float(rs.cantidad * rs.precio_unitario)
 
         snacks.append({
 
@@ -318,9 +319,7 @@ def get_transaction_detail(
 
             "cantidad": rs.cantidad,
 
-            "subtotal": float(
-                rs.subtotal
-            )
+            "subtotal": subtotal
         })
 
     return {

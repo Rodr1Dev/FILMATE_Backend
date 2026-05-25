@@ -26,13 +26,3 @@ class PeliculaGenero(Base):
         ForeignKey("genero.id_genero"),
         primary_key=True
     )
-
-    pelicula = relationship(
-        "Pelicula",
-        back_populates="generos"
-    )
-
-    genero = relationship(
-        "Genero",
-        back_populates="peliculas"
-    )

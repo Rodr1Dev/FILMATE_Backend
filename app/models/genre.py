@@ -25,8 +25,3 @@ class Genero(Base):
         unique=True,
         nullable=False
     )
-
-    peliculas = relationship(
-        "PeliculaGenero",
-        back_populates="genero"
-    )

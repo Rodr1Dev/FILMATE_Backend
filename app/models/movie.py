@@ -91,8 +91,11 @@ class Pelicula(Base):
     )
 
     generos = relationship(
-        "PeliculaGenero",
-        back_populates="pelicula"
+        "Genero",
+        secondary="pelicula_genero",
+        primaryjoin="Pelicula.id_pelicula == foreign(PeliculaGenero.id_pelicula)",
+        secondaryjoin="Genero.id_genero == foreign(PeliculaGenero.id_genero)",
+        viewonly=True
     )
 
     actores = relationship(

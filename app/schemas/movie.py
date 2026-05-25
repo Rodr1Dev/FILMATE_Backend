@@ -56,11 +56,18 @@ class MovieUpdate(BaseModel):
 
 
 
+class GeneroSchema(BaseModel):
+    id_genero: int
+    nombre: str
+    class Config:
+        from_attributes = True
+
 class MovieResponse(MovieBase):
     id_pelicula: int
     categoria_cartelera: str
     estado_registro: str
     fecha_creacion: datetime
+    generos: List[GeneroSchema] = []
 
     class Config:
         from_attributes = True

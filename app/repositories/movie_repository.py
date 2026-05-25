@@ -1,4 +1,4 @@
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from app.models.movie import Pelicula
 from typing import List, Optional
 import logging
@@ -26,18 +26,20 @@ def get_movie(db: Session, movie_id: int) -> Optional[Pelicula]:
         raise
 
 
+# ✅ CORRECTO
 def list_movies(db: Session, skip: int = 0, limit: int = 100) -> List[Pelicula]:
     logger.info(f"📽️ Listando películas (skip={skip}, limit={limit})")
     try:
-        movies = db.query(Pelicula).offset(skip).limit(limit).all()
-        logger.info(f"✅ Se obtuvieron {len(movies)} películas")
-        return (
+        movies = (
             db.query(Pelicula)
+            .options(joinedload(Pelicula.generos))
             .filter(Pelicula.estado_registro == "Activo")
             .offset(skip)
             .limit(limit)
             .all()
         )
+        logger.info(f"✅ Se obtuvieron {len(movies)} películas")
+        return movies
     except Exception as e:
         logger.error(f"❌ Error al listar películas: {e}")
         raise
@@ -75,6 +77,7 @@ def update_movie(
 
     movie.titulo = data["titulo"]
     movie.sinopsis = data["sinopsis"]
+    movie.categoria_cartelera = data.get("categoria_cartelera")
     movie.duracion_minutos = data["duracion_minutos"]
     movie.clasificacion_edad = data["clasificacion_edad"]
 

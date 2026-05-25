@@ -50,6 +50,8 @@ class SnackDetail(BaseModel):
     producto: str
     cantidad: int
     subtotal: float
+    class Config:
+        from_attributes = True
 
 
 class TransactionDetail(BaseModel):
