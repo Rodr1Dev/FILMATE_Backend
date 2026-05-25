@@ -6,6 +6,7 @@ from app.models.actor import Actor
 from app.models.review import Resena
 from app.models.movie_genre import PeliculaGenero
 from app.models.movie_actor import PeliculaActor
+from app.models.banner import BannerHome
 from fastapi import HTTPException
 
 def get_movie_details(db: Session, movie_id: int):
@@ -17,18 +18,30 @@ def get_movie_details(db: Session, movie_id: int):
     if not movie:
         raise HTTPException(status_code=404, detail="Movie not found")
 
+    # =========================
+    # OBTENER BANNER
+    # =========================
+
+    banner = db.query(BannerHome).filter(
+        BannerHome.id_pelicula == movie_id
+    ).first()
+
     generos = (
         db.query(Genero.nombre)
-        .join(PeliculaGenero,
-              PeliculaGenero.id_genero == Genero.id_genero)
+        .join(
+            PeliculaGenero,
+            PeliculaGenero.id_genero == Genero.id_genero
+        )
         .filter(PeliculaGenero.id_pelicula == movie_id)
         .all()
     )
 
     actores = (
         db.query(Actor.nombre, PeliculaActor.personaje)
-        .join(PeliculaActor,
-              PeliculaActor.id_actor == Actor.id_actor)
+        .join(
+            PeliculaActor,
+            PeliculaActor.id_actor == Actor.id_actor
+        )
         .filter(PeliculaActor.id_pelicula == movie_id)
         .all()
     )
@@ -51,8 +64,13 @@ def get_movie_details(db: Session, movie_id: int):
         "sinopsis": movie.sinopsis,
         "duracion_minutos": movie.duracion_minutos,
         "clasificacion_edad": movie.clasificacion_edad,
+
         "url_poster": movie.url_poster,
         "url_trailer": movie.url_trailer,
+
+        # ✅ ESTO FALTABA
+        "url_banner": banner.imagen_url if banner else None,
+
         "categoria_cartelera": movie.categoria_cartelera,
 
         "generos": generos,

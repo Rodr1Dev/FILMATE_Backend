@@ -2,13 +2,15 @@ import logging
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from typing import List
+from typing import Optional
 
 from app.core.dependencies import get_db
 
 from app.schemas.transaction import (
-    TransactionItem,
-    TransactionDetail
+    TransactionListResponse,
+    TransactionDetail,
+    ValidateQRSchema,
+    ValidateResponse
 )
 
 from app.repositories import transaction_repository
@@ -16,41 +18,34 @@ from app.repositories import transaction_repository
 logger = logging.getLogger(__name__)
 
 router = APIRouter(
-    prefix="/admin/transactions",
-    tags=["admin-transactions"]
+    prefix="/api/ventas",
+    tags=["ventas"]
 )
 
 
 @router.get(
-    "/",
-    response_model=List[TransactionItem],
-    responses={
-        500: {
-            "description": "Internal Server Error"
-        }
-    }
+    "/transacciones",
+    response_model=TransactionListResponse
 )
 def list_transactions(
+    estado: Optional[str] = None,
+    buscar: Optional[str] = None,
+    page: int = 1,
+    limit: int = 10,
     db: Session = Depends(get_db)
 ):
-    logger.info("📥 GET /admin/transactions")
 
-    try:
-        return transaction_repository.list_transactions(db)
-
-    except Exception as e:
-        logger.error(
-            f"❌ Error GET /admin/transactions: {e}"
-        )
-
-        raise HTTPException(
-            status_code=500,
-            detail=str(e)
-        )
+    return transaction_repository.list_transactions(
+        db=db,
+        estado=estado,
+        buscar=buscar,
+        page=page,
+        limit=limit
+    )
 
 
 @router.get(
-    "/{reservation_id}",
+    "/transacciones/{reservation_id}",
     response_model=TransactionDetail,
     responses={
         404: {
@@ -65,11 +60,13 @@ def get_transaction_detail(
     reservation_id: int,
     db: Session = Depends(get_db)
 ):
+
     logger.info(
-        f"📥 GET /admin/transactions/{reservation_id}"
+        f"📥 GET /api/ventas/transacciones/{reservation_id}"
     )
 
     try:
+
         transaction = (
             transaction_repository.get_transaction_detail(
                 db,
@@ -78,6 +75,7 @@ def get_transaction_detail(
         )
 
         if not transaction:
+
             raise HTTPException(
                 status_code=404,
                 detail="Transaction not found"
@@ -89,11 +87,31 @@ def get_transaction_detail(
         raise
 
     except Exception as e:
+
         logger.error(
-            f"❌ Error GET /admin/transactions/{reservation_id}: {e}"
+            f"❌ Error GET /api/ventas/transacciones/{reservation_id}: {e}"
         )
 
         raise HTTPException(
             status_code=500,
             detail=str(e)
         )
+
+
+@router.post(
+    "/validar",
+    response_model=ValidateResponse
+)
+def validate_ticket(
+    payload: ValidateQRSchema,
+    db: Session = Depends(get_db)
+):
+
+    return (
+        transaction_repository
+        .validate_ticket_or_transaction(
+            db=db,
+            codigo_qr=payload.codigo_qr,
+            codigo=payload.codigo
+        )
+    )

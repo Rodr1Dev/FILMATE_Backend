@@ -1,6 +1,7 @@
 from pydantic import BaseModel
 from datetime import datetime
 from typing import List, Optional
+from app.models.banner import BannerHome
 
 
 class MovieBase(BaseModel):
@@ -12,18 +13,47 @@ class MovieBase(BaseModel):
     url_trailer: Optional[str] = None
 
 
-class MovieCreate(MovieBase):
-    pass
+class MovieCreate(BaseModel):
 
+    titulo: str
+    sinopsis: str | None = None
+    duracion_minutos: int | None = None
+    clasificacion_edad: str | None = None
+
+    url_poster: str | None = None
+    url_trailer: str | None = None
+    url_banner: str | None = None
+
+    categoria_cartelera: str
+    estado_registro: str
+
+    generos: list[int]
+
+    elenco: list[dict] = []
+
+class ActorInput(BaseModel):
+    nombre: str
+    personaje: str
 
 class MovieUpdate(BaseModel):
-    titulo: str
-    sinopsis: str
-    duracion_minutos: int
-    clasificacion_edad: str
-    url_poster: str
-    url_trailer: str
-    categoria_cartelera: str
+
+    titulo: Optional[str] = None
+    sinopsis: Optional[str] = None
+    duracion_minutos: Optional[int] = None
+    clasificacion_edad: Optional[str] = None
+
+    categoria_cartelera: Optional[str] = None
+    estado_registro: Optional[str] = None
+
+    url_poster: Optional[str] = None
+    url_banner: Optional[str] = None
+    url_trailer: Optional[str] = None
+
+    generos: List[int]
+
+    elenco: List[ActorInput] = []
+
+
 
 
 class MovieResponse(MovieBase):
@@ -50,8 +80,11 @@ class MovieDetailsResponse(BaseModel):
     sinopsis: Optional[str] = None
     duracion_minutos: int
     clasificacion_edad: Optional[str] = None
+
     url_poster: Optional[str] = None
     url_trailer: Optional[str] = None
+    url_banner: Optional[str] = None   # ← AGREGA ESTO
+
     categoria_cartelera: Optional[str] = None
 
     generos: List[MovieGenreItem]

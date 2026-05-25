@@ -2,6 +2,12 @@ from sqlalchemy.orm import Session
 from app.models.movie import Pelicula
 from typing import List, Optional
 import logging
+from app.models.movie import Pelicula
+from app.models.movie_genre import PeliculaGenero
+from app.models.movie_actor import PeliculaActor
+from app.models.actor import Actor
+from app.models.banner import BannerHome
+from sqlalchemy import text
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +31,13 @@ def list_movies(db: Session, skip: int = 0, limit: int = 100) -> List[Pelicula]:
     try:
         movies = db.query(Pelicula).offset(skip).limit(limit).all()
         logger.info(f"✅ Se obtuvieron {len(movies)} películas")
-        return movies
+        return (
+            db.query(Pelicula)
+            .filter(Pelicula.estado_registro == "Activo")
+            .offset(skip)
+            .limit(limit)
+            .all()
+        )
     except Exception as e:
         logger.error(f"❌ Error al listar películas: {e}")
         raise
@@ -45,7 +57,11 @@ def create_movie(db: Session, movie: Pelicula) -> Pelicula:
         raise
 
 
-def update_movie(db: Session, movie_id: int, payload):
+def update_movie(
+    db: Session,
+    movie_id: int,
+    data: dict
+):
     movie = db.query(Pelicula).filter(
         Pelicula.id_pelicula == movie_id
     ).first()
@@ -53,20 +69,100 @@ def update_movie(db: Session, movie_id: int, payload):
     if not movie:
         return None
 
-    movie.titulo = payload.titulo
-    movie.sinopsis = payload.sinopsis
-    movie.duracion_minutos = payload.duracion_minutos
-    movie.clasificacion_edad = payload.clasificacion_edad
-    movie.url_poster = payload.url_poster
-    movie.url_trailer = payload.url_trailer
+    # =========================
+    # ACTUALIZAR PELICULA
+    # =========================
 
+    movie.titulo = data["titulo"]
+    movie.sinopsis = data["sinopsis"]
+    movie.duracion_minutos = data["duracion_minutos"]
+    movie.clasificacion_edad = data["clasificacion_edad"]
+
+    movie.categoria_cartelera = data["categoria_cartelera"]
+    movie.estado_registro = data["estado_registro"]
+
+    movie.url_poster = data["url_poster"]
+    movie.url_trailer = data["url_trailer"]
+
+    # =========================
+    # GENEROS
+    # =========================
+
+    db.query(PeliculaGenero).filter(
+        PeliculaGenero.id_pelicula == movie_id
+    ).delete()
+
+    for genero_id in data["generos"]:
+        nuevo_genero = PeliculaGenero(
+            id_pelicula=movie_id,
+            id_genero=genero_id
+        )
+
+        db.add(nuevo_genero)
+
+    # =========================
+    # ELENCO
+    # =========================
+
+    db.query(PeliculaActor).filter(
+        PeliculaActor.id_pelicula == movie_id
+    ).delete()
+
+    for actor_data in data.get("elenco", []):
+
+        actor = db.query(Actor).filter(
+            Actor.nombre == actor_data["nombre"]
+        ).first()
+
+        if not actor:
+            actor = Actor(
+                nombre=actor_data["nombre"]
+            )
+
+            db.add(actor)
+            db.flush()
+
+        pelicula_actor = PeliculaActor(
+            id_pelicula=movie_id,
+            id_actor=actor.id_actor,
+            personaje=actor_data["personaje"]
+        )
+
+        db.add(pelicula_actor)
+
+    # =========================
+    # BANNER
+    # =========================
+
+    url_banner = data.get("url_banner")
+
+    if url_banner is not None and url_banner != "":
+
+        banner = db.query(BannerHome).filter(
+            BannerHome.id_pelicula == movie_id
+        ).first()
+
+        if banner:
+
+            banner.imagen_url = url_banner
+
+        else:
+
+            nuevo_banner = BannerHome(
+                id_pelicula=movie_id,
+                imagen_url=url_banner,
+                orden=1,
+                is_activo=True
+            )
+
+            db.add(nuevo_banner)
     db.commit()
     db.refresh(movie)
 
     return movie
 
+def delete_movie(db, movie_id):
 
-def delete_movie(db: Session, movie_id: int):
     movie = db.query(Pelicula).filter(
         Pelicula.id_pelicula == movie_id
     ).first()
@@ -74,38 +170,26 @@ def delete_movie(db: Session, movie_id: int):
     if not movie:
         return None
 
+    # eliminar relaciones
+    db.execute(text("""
+        DELETE FROM pelicula_genero
+        WHERE id_pelicula = :id
+    """), {"id": movie_id})
+
+    db.execute(text("""
+        DELETE FROM pelicula_actor
+        WHERE id_pelicula = :id
+    """), {"id": movie_id})
+
+    db.execute(text("""
+        DELETE FROM banner_home
+        WHERE id_pelicula = :id
+    """), {"id": movie_id})
+
+    # eliminar película
     db.delete(movie)
+
     db.commit()
 
     return movie
 
-
-def update_movie(db: Session, movie_id: int, data: dict):
-    movie = db.query(Pelicula).filter(
-        Pelicula.id_pelicula == movie_id
-    ).first()
-
-    if not movie:
-        return None
-
-    for key, value in data.items():
-        setattr(movie, key, value)
-
-    db.commit()
-    db.refresh(movie)
-
-    return movie
-
-
-def delete_movie(db: Session, movie_id: int):
-    movie = db.query(Pelicula).filter(
-        Pelicula.id_pelicula == movie_id
-    ).first()
-
-    if not movie:
-        return None
-
-    db.delete(movie)
-    db.commit()
-
-    return movie
