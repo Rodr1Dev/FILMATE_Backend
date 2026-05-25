@@ -10,7 +10,7 @@ import logging
 
 from app.core.database import engine, Base
 from app.models import *
-from app.routes import auth, cinemas, movies, users, reviews, showtimes, seats, orders, tickets, admin_transactions, snacks
+from app.routes import auth, cinemas, movies, users, reviews, showtimes, seats, orders, tickets, admin_transactions, snacks, rooms
 from app.websocket.seats_ws import router as seats_ws_router
 
 logger = logging.getLogger(__name__)
@@ -50,6 +50,7 @@ app.include_router(tickets.router)
 app.include_router(seats_ws_router)
 app.include_router(admin_transactions.router)
 app.include_router(snacks.router)
+app.include_router(rooms.router)
 
 
 @app.get("/", summary="Estado del servicio")

@@ -21,7 +21,15 @@ router = APIRouter(
 )
 
 
-@router.get("/", response_model=List[TransactionItem])
+@router.get(
+    "/",
+    response_model=List[TransactionItem],
+    responses={
+        500: {
+            "description": "Internal Server Error"
+        }
+    }
+)
 def list_transactions(
     db: Session = Depends(get_db)
 ):
@@ -43,7 +51,15 @@ def list_transactions(
 
 @router.get(
     "/{reservation_id}",
-    response_model=TransactionDetail
+    response_model=TransactionDetail,
+    responses={
+        404: {
+            "description": "Transaction not found"
+        },
+        500: {
+            "description": "Internal Server Error"
+        }
+    }
 )
 def get_transaction_detail(
     reservation_id: int,
