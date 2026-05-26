@@ -48,7 +48,7 @@ backend/
 ### 1. Clonar el repositorio
 
 ```bash
-git clone https://github.com/tu-usuario/filmate-backend.git
+git clone https://github.com/tu-usuario/filmate-backend.git  #o en su defecto la rama develop que tambien es donde estan las actualizaciones aprobadas (recomiendo esa)
 cd filmate-backend/backend
 ```
 
