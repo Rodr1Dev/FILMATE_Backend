@@ -30,6 +30,8 @@ router = APIRouter(
 def list_transactions(
     estado: Optional[str] = None,
     buscar: Optional[str] = None,
+    fecha: Optional[str] = None,
+    tipo:  Optional[str] = None,
     page: int = 1,
     limit: int = 10,
     db: Session = Depends(get_db)
@@ -39,6 +41,7 @@ def list_transactions(
         db=db,
         estado=estado,
         buscar=buscar,
+        fecha=fecha,
         page=page,
         limit=limit
     )

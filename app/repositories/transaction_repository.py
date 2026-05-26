@@ -146,6 +146,7 @@ def list_transactions(
 
         transactions.append({
             "id_reserva":   reserva.id_reserva,
+            "transaccion_id": reserva.transaccion_id,
             "cliente":      f"{usuario.nombres} {usuario.apellidos}",
             "pelicula":     pelicula.titulo,
             "sala":         sala.nombre,

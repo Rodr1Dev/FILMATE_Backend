@@ -6,7 +6,7 @@ from pydantic import BaseModel
 
 class TransactionItem(BaseModel):
     id_reserva: int
-
+    transaccion_id: Optional[str] = None
     cliente: str
     pelicula: str
     sala: str
@@ -45,6 +45,7 @@ class TicketDetail(BaseModel):
     asiento: str
     precio_pagado: float
     estado_ingreso: str
+    codigo_qr: Optional[str] = None
 
 
 class SnackDetail(BaseModel):
