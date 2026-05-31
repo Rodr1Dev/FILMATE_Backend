@@ -113,7 +113,7 @@ Una vez que el servidor esté corriendo, accede a:
 
 | Interfaz | URL |
 |---|---|
-| Swagger UI | `http://localhost:8000/docs` |
+| Swagger UI | `http://localhost:8000/api/docs` |
 | ReDoc | `http://localhost:8000/redoc` |
 
 ---
