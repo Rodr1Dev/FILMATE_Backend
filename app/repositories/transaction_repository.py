@@ -157,17 +157,10 @@ def list_transactions(
             "tipo":         tipo,   # ← nuevo campo
         })
 
-    ingresos_reservas = float(
+    ingresos_totales = float(
         db.query(func.coalesce(func.sum(Reserva.monto_total), 0))
         .scalar()
     )
-
-    ingresos_snacks = float(
-        db.query(func.coalesce(func.sum(ReservaSnack.subtotal), 0))
-        .scalar()
-    )
-
-    ingresos_totales = ingresos_reservas + ingresos_snacks
 
     ventas_mes = (
         db.query(func.count(Reserva.id_reserva))
@@ -176,7 +169,7 @@ def list_transactions(
     )
 
     ticket_promedio = (
-        ingresos_reservas / ventas_mes
+        ingresos_totales / ventas_mes
         if ventas_mes > 0
         else 0
     )
