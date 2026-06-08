@@ -21,7 +21,7 @@ backend/
 │   ├── websocket/         # Tiempo real (asientos)
 │   └── main.py            # Punto de entrada
 ├── scripts/
-│   └── DSOOMDAG4v1.5.sql  # Esquema de base de datos
+│   └── DSOOMDAG4v2.1.sql  # Esquema de base de datos
 ├── requirements.txt
 └── .env
 ```
@@ -57,7 +57,7 @@ DB_NAME=filmate_db
 Ejecutar el script SQL en MySQL:
 
 ```bash
-mysql -u root -p < scripts/DSOOMDAG4v1.5.sql
+mysql -u root -p < scripts/DSOOMDAG4v2.1.sql
 ```
 
 ---
@@ -168,7 +168,7 @@ Servidor en `http://localhost:8000` — Swagger en `/docs`.
 
 ## Base de datos
 
-Esquema en `scripts/DSOOMDAG4v1.5.sql` — 30 tablas con modelos, vistas, triggers y procedimientos almacenados.
+Esquema en `scripts/DSOOMDAG4v2.1.sql` — 31 tablas con modelos, vistas, triggers y procedimientos almacenados.
 
 Módulos principales:
 - **Seguridad**: `usuarios`, `roles`, `permisos`, `usuarios_roles`, `roles_permisos`
