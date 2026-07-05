@@ -400,6 +400,7 @@ CREATE TABLE configuracion_sistema (
 
 INSERT IGNORE INTO configuracion_sistema (clave, valor, descripcion, tipo_dato, categoria) VALUES
 ('precios_formato', '{"2D": 8.50, "3D": 11.00, "IMAX": 14.00}', 'Precios base por formato de sala', 'json', 'precios'),
+('precios_sala_formato', '[{"tipo_sala":"Estándar","formato":"2D","precio":8.5},{"tipo_sala":"Estándar","formato":"3D","precio":11},{"tipo_sala":"VIP","formato":"2D","precio":15},{"tipo_sala":"VIP","formato":"3D","precio":18},{"tipo_sala":"IMAX","formato":"2D","precio":14},{"tipo_sala":"IMAX","formato":"3D","precio":17},{"tipo_sala":"4DX","formato":"2D","precio":18},{"tipo_sala":"4DX","formato":"3D","precio":21}]', 'Precios base por tipo de sala y formato', 'json', 'precios'),
 ('tipos_entrada', '[{"id":"general","tipo":"General","porcentaje":100},{"id":"nino","tipo":"Niño","porcentaje":50},{"id":"jubilado","tipo":"Jubilado","porcentaje":70},{"id":"estudiante","tipo":"Estudiante","porcentaje":80}]', 'Tipos de entrada con porcentaje sobre precio base', 'json', 'entradas'),
 ('tasa_servicio', '5.00', 'Porcentaje de tasa por servicio aplicado a cada compra', 'number', 'precios'),
 ('iva_porcentaje', '13.00', 'Porcentaje de IVA sobre el subtotal', 'number', 'precios'),
