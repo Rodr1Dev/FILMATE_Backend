@@ -5,7 +5,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from app.core.dependencies import get_db, get_current_admin
+from app.core.dependencies import get_db, require_permiso
 from app.models.configuracion_sistema import ConfiguracionSistema
 from app.models.snack_product import ProductoConfiteria
 from app.schemas.configuracion import (
@@ -34,7 +34,7 @@ def _get_config_or_404(db: Session, clave: str) -> ConfiguracionSistema:
 @router.get("/precios-formato", response_model=PreciosFormatoResponse)
 def get_precios_formato(
     db: Annotated[Session, Depends(get_db)],
-    _admin: Annotated[dict, Depends(get_current_admin)],
+    _permiso: Annotated[dict, Depends(require_permiso("GESTIONAR_CONFIGURACION"))],
 ):
     cfg = _get_config_or_404(db, "precios_formato")
     raw = json.loads(cfg.valor)
@@ -46,7 +46,7 @@ def get_precios_formato(
 def update_precios_formato(
     payload: PreciosFormatoRequest,
     db: Annotated[Session, Depends(get_db)],
-    _admin: Annotated[dict, Depends(get_current_admin)],
+    _permiso: Annotated[dict, Depends(require_permiso("GESTIONAR_CONFIGURACION"))],
 ):
     cfg = _get_config_or_404(db, "precios_formato")
     obj = {p.formato: p.precio for p in payload.precios}
@@ -82,7 +82,7 @@ def update_precios_sala_formato(
 @router.get("/tipos-entrada", response_model=TiposEntradaResponse)
 def get_tipos_entrada(
     db: Annotated[Session, Depends(get_db)],
-    _admin: Annotated[dict, Depends(get_current_admin)],
+    _permiso: Annotated[dict, Depends(require_permiso("GESTIONAR_CONFIGURACION"))],
 ):
     cfg = _get_config_or_404(db, "tipos_entrada")
     tipos = json.loads(cfg.valor)
@@ -93,7 +93,7 @@ def get_tipos_entrada(
 def update_tipos_entrada(
     payload: TiposEntradaRequest,
     db: Annotated[Session, Depends(get_db)],
-    _admin: Annotated[dict, Depends(get_current_admin)],
+    _permiso: Annotated[dict, Depends(require_permiso("GESTIONAR_CONFIGURACION"))],
 ):
     cfg = _get_config_or_404(db, "tipos_entrada")
     cfg.valor = json.dumps([t.model_dump() for t in payload.tipos], ensure_ascii=False)
@@ -105,7 +105,7 @@ def update_tipos_entrada(
 @router.get("/confiteria", response_model=ConfiteriaListResponse)
 def list_confiteria(
     db: Annotated[Session, Depends(get_db)],
-    _admin: Annotated[dict, Depends(get_current_admin)],
+    _permiso: Annotated[dict, Depends(require_permiso("GESTIONAR_CONFIGURACION"))],
 ):
     productos = db.query(ProductoConfiteria).order_by(ProductoConfiteria.id_producto).all()
     items = [
@@ -119,7 +119,7 @@ def list_confiteria(
 def create_confiteria(
     payload: ConfiteriaCreateRequest,
     db: Annotated[Session, Depends(get_db)],
-    _admin: Annotated[dict, Depends(get_current_admin)],
+    _permiso: Annotated[dict, Depends(require_permiso("GESTIONAR_CONFIGURACION"))],
 ):
     producto = ProductoConfiteria(
         nombre_producto=payload.nombre,
@@ -137,7 +137,7 @@ def update_confiteria(
     producto_id: int,
     payload: ConfiteriaUpdateRequest,
     db: Annotated[Session, Depends(get_db)],
-    _admin: Annotated[dict, Depends(get_current_admin)],
+    _permiso: Annotated[dict, Depends(require_permiso("GESTIONAR_CONFIGURACION"))],
 ):
     producto = db.query(ProductoConfiteria).filter(ProductoConfiteria.id_producto == producto_id).first()
     if not producto:
@@ -155,7 +155,7 @@ def update_confiteria(
 def delete_confiteria(
     producto_id: int,
     db: Annotated[Session, Depends(get_db)],
-    _admin: Annotated[dict, Depends(get_current_admin)],
+    _permiso: Annotated[dict, Depends(require_permiso("GESTIONAR_CONFIGURACION"))],
 ):
     producto = db.query(ProductoConfiteria).filter(ProductoConfiteria.id_producto == producto_id).first()
     if not producto:
@@ -168,7 +168,7 @@ def delete_confiteria(
 @router.get("/params", response_model=ParametrosListResponse)
 def list_params(
     db: Annotated[Session, Depends(get_db)],
-    _admin: Annotated[dict, Depends(get_current_admin)],
+    _permiso: Annotated[dict, Depends(require_permiso("GESTIONAR_CONFIGURACION"))],
 ):
     registros = db.query(ConfiguracionSistema).filter(
         ConfiguracionSistema.activo == True
@@ -188,7 +188,7 @@ def update_param(
     clave: str,
     payload: ParametroUpdateRequest,
     db: Annotated[Session, Depends(get_db)],
-    _admin: Annotated[dict, Depends(get_current_admin)],
+    _permiso: Annotated[dict, Depends(require_permiso("GESTIONAR_CONFIGURACION"))],
 ):
     cfg = _get_config_or_404(db, clave)
     cfg.valor = payload.valor
