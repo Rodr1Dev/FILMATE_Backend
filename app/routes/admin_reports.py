@@ -8,7 +8,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
-from app.core.dependencies import require_permiso, get_db
+from app.core.dependencies import get_current_admin, get_db, require_permiso
+from app.models.log_actividad_sistema import LogActividadSistema
 from app.repositories import reports_repository
 from app.schemas.reports import (
     AnalisisResponse,
@@ -239,8 +240,9 @@ def export_csv(
 def reportes_generados(
     db: Annotated[Session, Depends(get_db)],
     _permiso: Annotated[dict, Depends(require_permiso("VER_REPORTES"))],
+    periodo: Annotated[str, Query(pattern="^(hoy|semana|mes|mes_anterior)$")] = "mes",
 ):
-    row = reports_repository.get_reporte_contador(db)
+    row = reports_repository.get_reporte_contador(db, periodo)
     return {"count": row.count, "ultima_generacion": row.ultima_generacion}
 
 
@@ -248,5 +250,13 @@ def reportes_generados(
 def generar_reporte(
     db: Annotated[Session, Depends(get_db)],
     _permiso: Annotated[dict, Depends(require_permiso("VER_REPORTES"))],
+    _admin: Annotated[dict, Depends(get_current_admin)],
 ):
+    log = LogActividadSistema(
+        id_usuario=_admin["user_id"],
+        accion_realizada="Reporte generado",
+        modulo_afectado="reportes",
+        ip_origen="0.0.0.0"
+    )
+    db.add(log)
     return reports_repository.incrementar_reporte_contador(db)

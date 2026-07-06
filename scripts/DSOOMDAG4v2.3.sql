@@ -370,6 +370,19 @@ CREATE TABLE log_actividad_sistema (
     FOREIGN KEY (id_usuario) REFERENCES usuarios(id_usuario) ON DELETE SET NULL
 );
 
+-- --- MÓDULO: NOTIFICACIONES DEL PANEL ADMINISTRATIVO ---
+CREATE TABLE notificaciones_admin (
+    id_notificacion INT AUTO_INCREMENT PRIMARY KEY,
+    tipo VARCHAR(30) NOT NULL,                   -- 'warning','info','success','error'
+    titulo VARCHAR(100) NOT NULL,
+    mensaje TEXT NOT NULL,
+    modulo VARCHAR(50) NOT NULL,                 -- 'VENTAS','USUARIOS','PELICULAS','CONFITERIA','SISTEMA'
+    leida BOOLEAN DEFAULT FALSE,
+    id_usuario_destino INT DEFAULT NULL,         -- NULL = para todos los admins
+    fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (id_usuario_destino) REFERENCES usuarios(id_usuario) ON DELETE SET NULL
+);
+
 CREATE TABLE historial_actividad (
     id_actividad INT AUTO_INCREMENT PRIMARY KEY,
     id_usuario INT NOT NULL,
@@ -400,6 +413,7 @@ CREATE TABLE configuracion_sistema (
 
 INSERT IGNORE INTO configuracion_sistema (clave, valor, descripcion, tipo_dato, categoria) VALUES
 ('precios_formato', '{"2D": 8.50, "3D": 11.00, "IMAX": 14.00}', 'Precios base por formato de sala', 'json', 'precios'),
+('precios_sala_formato', '[{"tipo_sala":"Estándar","formato":"2D","precio":8.5},{"tipo_sala":"Estándar","formato":"3D","precio":11},{"tipo_sala":"VIP","formato":"2D","precio":15},{"tipo_sala":"VIP","formato":"3D","precio":18},{"tipo_sala":"IMAX","formato":"2D","precio":14},{"tipo_sala":"IMAX","formato":"3D","precio":17},{"tipo_sala":"4DX","formato":"2D","precio":18},{"tipo_sala":"4DX","formato":"3D","precio":21}]', 'Precios base por tipo de sala y formato', 'json', 'precios'),
 ('tipos_entrada', '[{"id":"general","tipo":"General","porcentaje":100},{"id":"nino","tipo":"Niño","porcentaje":50},{"id":"jubilado","tipo":"Jubilado","porcentaje":70},{"id":"estudiante","tipo":"Estudiante","porcentaje":80}]', 'Tipos de entrada con porcentaje sobre precio base', 'json', 'entradas'),
 ('tasa_servicio', '5.00', 'Porcentaje de tasa por servicio aplicado a cada compra', 'number', 'precios'),
 ('iva_porcentaje', '13.00', 'Porcentaje de IVA sobre el subtotal', 'number', 'precios'),
@@ -484,7 +498,11 @@ INSERT INTO permisos (codigo_permiso, descripcion, modulo) VALUES
 ('COMPRAR_BOLETOS', 'Permite reservar asientos y realizar pagos de funciones', 'OPERACIONES CLIENTE'),
 ('GESTIONAR_CARRITO', 'Permite interactuar con el carrito de confitería', 'OPERACIONES CLIENTE'),
 ('PUBLICAR_RESENAS', 'Permite calificar películas y escribir comentarios', 'SOCIAL'),
-('SEGUIR_USUARIOS', 'Permite seguir e interactuar con el feed de otros usuarios', 'SOCIAL');
+('SEGUIR_USUARIOS', 'Permite seguir e interactuar con el feed de otros usuarios', 'SOCIAL'),
+-- Módulo: Panel de Control y Reportes
+('GESTIONAR_PROGRAMACION', 'Permite gestionar la cartelera y horarios', 'ADMINISTRACIÓN'),
+('VER_DASHBOARD', 'Permite ver el dashboard principal', 'ADMINISTRACIÓN'),
+('VER_REPORTES', 'Permite ver y exportar reportes', 'ADMINISTRACIÓN');
 
 
 -- 1.3. ASIGNACIÓN DE PERMISOS A ROLES (roles_permisos)
@@ -496,6 +514,23 @@ SELECT 1, id_permiso FROM permisos;
 INSERT INTO roles_permisos (id_role, id_permiso)
 SELECT 2, id_permiso FROM permisos 
 WHERE codigo_permiso IN ('COMPRAR_BOLETOS', 'GESTIONAR_CARRITO', 'PUBLICAR_RESENAS', 'SEGUIR_USUARIOS');
+
+-- 1.3.1. ROL SUPERADMIN (id = 3) — Control total del sistema
+INSERT INTO roles (id_role, nombre_rol, descripcion)
+VALUES (3, 'SUPERADMIN', 'Acceso absoluto: gestión de roles, permisos, eliminación de cuentas y auditoría del sistema');
+
+-- 1.3.2. ASIGNACIÓN DE PERMISOS AL ROL SUPERADMIN (recibe absolutamente todos)
+INSERT INTO roles_permisos (id_role, id_permiso)
+SELECT 3, id_permiso FROM permisos;
+
+-- 1.3.3. ASIGNACIÓN DE PERMISOS DE PANEL Y REPORTES (ADMINISTRADOR y SUPERADMIN)
+INSERT IGNORE INTO roles_permisos (id_role, id_permiso)
+SELECT 1, id_permiso FROM permisos
+WHERE codigo_permiso IN ('GESTIONAR_PROGRAMACION', 'VER_DASHBOARD', 'VER_REPORTES');
+
+INSERT IGNORE INTO roles_permisos (id_role, id_permiso)
+SELECT 3, id_permiso FROM permisos
+WHERE codigo_permiso IN ('GESTIONAR_PROGRAMACION', 'VER_DASHBOARD', 'VER_REPORTES');
 
 
 USE filmate_db;
@@ -516,7 +551,11 @@ INSERT INTO usuarios (id_usuario, nombre, username, correo, contrasena, id_tipo_
 (10, 'Lucas André Benavides', 'lucas_benavides', 'lucas.bena@outlook.com', '/PeNCKLdvd25DOginwCXdXpBCDBTDUsw2icHmh6cvsDVYjm2NNQyMfp7M8tsvUNN', 1, '75961423', '912347856', 'https://api.dicebear.com/7.x/bottts/svg?seed=kuki_listo_7', 'ACTIVO'),
 (11, 'Andrea Carolina Castro', 'andre_castro', 'andrea.castro@gmail.com', '/PeNCKLdvd25DOginwCXdXpBCDBTDUsw2icHmh6cvsDVYjm2NNQyMfp7M8tsvUNN', 1, '46321598', '936582147', 'https://api.dicebear.com/7.x/bottts/svg?seed=kuki_listo_8', 'ACTIVO'),
 (12, 'Gonzalo Martín Farfán', 'gonzalo_f', 'gfarfan@gmail.com', '/PeNCKLdvd25DOginwCXdXpBCDBTDUsw2icHmh6cvsDVYjm2NNQyMfp7M8tsvUNN', 1, '71236985', '998521436', 'https://api.dicebear.com/7.x/bottts/svg?seed=kuki_listo_9', 'ACTIVO'),
-(13, 'Fiorella Beatriz Chávez', 'fio_chavez', 'fiorella.chavez@hotmail.com', '/PeNCKLdvd25DOginwCXdXpBCDBTDUsw2icHmh6cvsDVYjm2NNQyMfp7M8tsvUNN', 1, '43652198', '954123687', 'https://api.dicebear.com/7.x/bottts/svg?seed=kuki_listo_10', 'ACTIVO');
+(13, 'Fiorella Beatriz Chávez', 'fio_chavez', 'fiorella.chavez@hotmail.com', '/PeNCKLdvd25DOginwCXdXpBCDBTDUsw2icHmh6cvsDVYjm2NNQyMfp7M8tsvUNN', 1, '43652198', '954123687', 'https://api.dicebear.com/7.x/bottts/svg?seed=kuki_listo_10', 'ACTIVO'),
+
+-- --- SUPERADMIN (id = 14) — Control absoluto del sistema ---
+-- Reutiliza el mismo hash de los usuarios seed para compartir la contraseña.
+(14, 'Super Administrador', 'superadmin', 'superadmin@filmate.com', '/PeNCKLdvd25DOginwCXdXpBCDBTDUsw2icHmh6cvsDVYjm2NNQyMfp7M8tsvUNN', 1, '00000001', '999999999', 'https://api.dicebear.com/10.x/initials/svg?seed=Super+Admin', 'ACTIVO');
 
 
 -- 1.5. ASIGNACIÓN DE ROLES A USUARIOS (usuarios_roles)
@@ -535,7 +574,9 @@ INSERT INTO usuarios_roles (id_usuario, id_role) VALUES
 (10, 2),
 (11, 2),
 (12, 2),
-(13, 2);
+(13, 2),
+-- Superadmin (id 14 -> Rol 3)
+(14, 3);
 -- ====================================================================
 -- BLOQUE 2: INSERCIÓN DE INFRAESTRUCTURA FÍSICA (CINES, SALAS Y ASIENTOS)
 -- ====================================================================
@@ -1408,6 +1449,70 @@ BEGIN
     IF OLD.precio_base <> NEW.precio_base THEN
         INSERT INTO log_actividad_sistema (id_usuario, accion_realizada, modulo_afectado, ip_origen)
         VALUES (NULL, CONCAT('Cambio de precio base en función ID: ', NEW.id_funcion, '. Anterior: S/.', OLD.precio_base, ' -> Nuevo: S/.', NEW.precio_base), 'CARTELERA', '127.0.0.1');
+    END IF;
+END //
+
+-- Trigger 6: Notificación de Nueva Transacción Aprobada
+DROP TRIGGER IF EXISTS trg_notif_transaccion_aprobada //
+CREATE TRIGGER trg_notif_transaccion_aprobada
+AFTER INSERT ON transacciones
+FOR EACH ROW
+BEGIN
+    IF NEW.estado_pago = 'Aprobado' THEN
+        INSERT INTO notificaciones_admin (tipo, titulo, mensaje, modulo)
+        VALUES ('info', 'Nueva venta registrada', CONCAT('Nueva venta: S/.', NEW.monto_total), 'VENTAS');
+    ELSEIF NEW.estado_pago = 'Fallido' THEN
+        INSERT INTO notificaciones_admin (tipo, titulo, mensaje, modulo)
+        VALUES ('error', 'Pago fallido detectado', CONCAT('Pago fallido: S/.', NEW.monto_total), 'VENTAS');
+    END IF;
+END //
+
+-- Trigger 7: Notificación de Nueva Solicitud de Reembolso
+DROP TRIGGER IF EXISTS trg_notif_solicitud_reembolso //
+CREATE TRIGGER trg_notif_solicitud_reembolso
+AFTER INSERT ON solicitudes_reembolso
+FOR EACH ROW
+BEGIN
+    INSERT INTO notificaciones_admin (tipo, titulo, mensaje, modulo)
+    VALUES ('warning', 'Reembolso pendiente de revisión', CONCAT('Solicitud de reembolso #', NEW.id_reembolso, ' por S/.', NEW.monto_reembolsado, ' requiere evaluación.'), 'VENTAS');
+END //
+
+-- Trigger 8: Notificación de Reembolso Resuelto
+DROP TRIGGER IF EXISTS trg_notif_reembolso_resuelto //
+CREATE TRIGGER trg_notif_reembolso_resuelto
+AFTER UPDATE ON solicitudes_reembolso
+FOR EACH ROW
+BEGIN
+    IF OLD.estado_solicitud = 'Evaluacion' AND NEW.estado_solicitud IN ('Aprobado', 'Rechazado') THEN
+        INSERT INTO notificaciones_admin (tipo, titulo, mensaje, modulo)
+        VALUES (
+            'success',
+            CONCAT('Reembolso ', NEW.estado_solicitud),
+            CONCAT('La solicitud de reembolso #', NEW.id_reembolso, ' fue ', LOWER(NEW.estado_solicitud), ' por S/.', NEW.monto_reembolsado, '.'),
+            'VENTAS'
+        );
+    END IF;
+END //
+
+-- Trigger 9: Notificación de Nuevo Usuario Registrado
+DROP TRIGGER IF EXISTS trg_notif_nuevo_usuario //
+CREATE TRIGGER trg_notif_nuevo_usuario
+AFTER INSERT ON usuarios
+FOR EACH ROW
+BEGIN
+    INSERT INTO notificaciones_admin (tipo, titulo, mensaje, modulo)
+    VALUES ('info', 'Nuevo usuario registrado', CONCAT('Nuevo usuario: ', NEW.nombre, ' (', NEW.username, ')'), 'USUARIOS');
+END //
+
+-- Trigger 10: Notificación de Stock Bajo en Confitería (<5)
+DROP TRIGGER IF EXISTS trg_notif_stock_bajo //
+CREATE TRIGGER trg_notif_stock_bajo
+AFTER UPDATE ON productos_confiteria
+FOR EACH ROW
+BEGIN
+    IF NEW.stock < 5 AND OLD.stock >= 5 THEN
+        INSERT INTO notificaciones_admin (tipo, titulo, mensaje, modulo)
+        VALUES ('warning', 'Stock bajo en inventario', CONCAT('Stock bajo: ', NEW.nombre, ' (quedan ', NEW.stock, ' unidades)'), 'CONFITERIA');
     END IF;
 END //
 
