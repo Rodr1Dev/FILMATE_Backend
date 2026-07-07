@@ -1,14 +1,15 @@
 import logging
-from typing import Annotated
+from typing import Annotated, List
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from app.core.dependencies import get_db
+from app.core.dependencies import get_current_admin, get_db
 from app.core.security import create_access_token
 from app.schemas.auth import LoginResponse
 from app.schemas.user import UserCreate, UserLogin, UserResponse
 from app.services.auth_service import authenticate_user, register_user
+from app.repositories.permission_repository import get_user_permisos
 from app.repositories.user_repository import get_user_roles
 
 logger = logging.getLogger(__name__)
@@ -50,3 +51,11 @@ def login(payload: UserLogin, db: Annotated[Session, Depends(get_db)]):
     except Exception as exc:
         logger.exception("Error en POST /auth/login")
         raise HTTPException(status_code=500, detail=str(exc))
+
+
+@router.get("/me/permisos", response_model=List[str])
+def mis_permisos(
+    payload: Annotated[dict, Depends(get_current_admin)],
+    db: Annotated[Session, Depends(get_db)],
+):
+    return get_user_permisos(db, payload.get("user_id"))
