@@ -7,14 +7,15 @@ import app.models
 from app.routes import (
     auth, cinemas, movies, users, showtimes, seats, orders,
     client_movies, client_cinemas, client_showtimes, client_seats,
-    client_orders, client_tickets, client_reviews, client_snacks,
+    client_orders, client_tickets, client_reviews, client_snacks, client_payments,
     client_reservations, client_interacciones,
     client_colecciones, client_carrito, client_seguidores, client_social,
     client_rooms, client_users, client_reembolsos,
     admin_movies, admin_cinemas, admin_showtimes, admin_seats, admin_users,
     admin_transactions, rooms, admin_reembolsos,
     reservations, admin_reservas, interacciones, roles, admin_dashboard,
-    admin_reports, admin_config,
+    admin_reports, admin_config, permisos, admin_logs,
+    admin_notifications,
 )
 from app.websocket.seats_ws import router as seats_ws_router
 
@@ -43,6 +44,7 @@ tags_metadata = [
     {"name": "admin roles", "description": "Admin: roles y permisos del sistema."},
     {"name": "admin dashboard", "description": "Admin: métricas agregadas del dashboard."},
     {"name": "admin reports", "description": "Admin: reportes de taquilla, ocupación, ventas y análisis."},
+    {"name": "admin notifications", "description": "Admin: notificaciones del sistema."},
 ]
 
 
@@ -73,6 +75,7 @@ def create_app() -> FastAPI:
     app.include_router(client_showtimes.router)
     app.include_router(client_seats.router)
     app.include_router(client_orders.router)
+    app.include_router(client_payments.router)
     app.include_router(client_tickets.router)
     app.include_router(client_snacks.router)
     app.include_router(client_reservations.router)
@@ -99,6 +102,9 @@ def create_app() -> FastAPI:
     app.include_router(admin_dashboard.router)
     app.include_router(admin_reports.router)
     app.include_router(admin_config.router)
+    app.include_router(admin_logs.router)
+    app.include_router(permisos.router)
+    app.include_router(admin_notifications.router)
 
     @app.get("/", summary="Estado del servicio")
     def root():

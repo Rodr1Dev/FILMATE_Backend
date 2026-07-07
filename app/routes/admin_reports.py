@@ -4,11 +4,12 @@ import logging
 from datetime import datetime, timedelta
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
-from app.core.dependencies import get_current_admin, get_db
+from app.core.dependencies import get_current_admin, get_db, require_permiso
+from app.models.log_actividad_sistema import LogActividadSistema
 from app.repositories import reports_repository
 from app.schemas.reports import (
     AnalisisResponse,
@@ -105,7 +106,7 @@ def _get_fecha_periodo_nombre(periodo: str):
 @router.get("/taquilla", response_model=TaquillaResponse)
 def report_taquilla(
     db: Annotated[Session, Depends(get_db)],
-    _admin: Annotated[dict, Depends(get_current_admin)],
+    _permiso: Annotated[dict, Depends(require_permiso("VER_REPORTES"))],
     periodo: Annotated[str, Query(pattern="^(hoy|semana|mes|anio|mes_anterior)$")] = "mes",
 ):
     return reports_repository.get_taquilla_data(db, periodo)
@@ -114,7 +115,7 @@ def report_taquilla(
 @router.get("/ocupacion-salas", response_model=OcupacionResponse)
 def report_ocupacion_salas(
     db: Annotated[Session, Depends(get_db)],
-    _admin: Annotated[dict, Depends(get_current_admin)],
+    _permiso: Annotated[dict, Depends(require_permiso("VER_REPORTES"))],
     periodo: Annotated[str, Query(pattern="^(hoy|semana|mes|anio|mes_anterior)$")] = "mes",
 ):
     return reports_repository.get_ocupacion_salas_data(db, periodo)
@@ -123,7 +124,7 @@ def report_ocupacion_salas(
 @router.get("/ventas-horario", response_model=VentaHorarioResponse)
 def report_ventas_horario(
     db: Annotated[Session, Depends(get_db)],
-    _admin: Annotated[dict, Depends(get_current_admin)],
+    _permiso: Annotated[dict, Depends(require_permiso("VER_REPORTES"))],
     periodo: Annotated[str, Query(pattern="^(hoy|semana|mes|anio|mes_anterior)$")] = "mes",
 ):
     return reports_repository.get_ventas_horario_data(db, periodo)
@@ -132,7 +133,7 @@ def report_ventas_horario(
 @router.get("/analisis-peliculas", response_model=AnalisisResponse)
 def report_analisis_peliculas(
     db: Annotated[Session, Depends(get_db)],
-    _admin: Annotated[dict, Depends(get_current_admin)],
+    _permiso: Annotated[dict, Depends(require_permiso("VER_REPORTES"))],
     periodo: Annotated[str, Query(pattern="^(hoy|semana|mes|anio|mes_anterior)$")] = "mes",
 ):
     return reports_repository.get_analisis_peliculas_data(db, periodo)
@@ -141,7 +142,7 @@ def report_analisis_peliculas(
 @router.get("/detalle-compras")
 def report_detalle_compras(
     db: Annotated[Session, Depends(get_db)],
-    _admin: Annotated[dict, Depends(get_current_admin)],
+    _permiso: Annotated[dict, Depends(require_permiso("VER_REPORTES"))],
     periodo: Annotated[str, Query(pattern="^(hoy|semana|mes|anio|mes_anterior)$")] = "mes",
 ):
     return reports_repository.get_detalle_compras_data(db, periodo)
@@ -150,7 +151,7 @@ def report_detalle_compras(
 @router.get("/export/excel")
 def export_excel(
     db: Annotated[Session, Depends(get_db)],
-    _admin: Annotated[dict, Depends(get_current_admin)],
+    _permiso: Annotated[dict, Depends(require_permiso("VER_REPORTES"))],
     tipo: Annotated[str, Query(pattern="^(taquilla|ocupacion-salas|ventas-horario|analisis-peliculas|detalle-compras)$")],
     periodo: Annotated[str, Query(pattern="^(hoy|semana|mes|anio|mes_anterior)$")] = "mes",
 ):
@@ -206,7 +207,7 @@ def export_excel(
 @router.get("/export/csv")
 def export_csv(
     db: Annotated[Session, Depends(get_db)],
-    _admin: Annotated[dict, Depends(get_current_admin)],
+    _permiso: Annotated[dict, Depends(require_permiso("VER_REPORTES"))],
     tipo: Annotated[str, Query(pattern="^(taquilla|ocupacion-salas|ventas-horario|analisis-peliculas|detalle-compras)$")],
     periodo: Annotated[str, Query(pattern="^(hoy|semana|mes|anio|mes_anterior)$")] = "mes",
 ):
@@ -238,15 +239,26 @@ def export_csv(
 @router.get("/generados")
 def reportes_generados(
     db: Annotated[Session, Depends(get_db)],
-    _admin: Annotated[dict, Depends(get_current_admin)],
+    _permiso: Annotated[dict, Depends(require_permiso("VER_REPORTES"))],
+    periodo: Annotated[str, Query(pattern="^(hoy|semana|mes|mes_anterior)$")] = "mes",
 ):
-    row = reports_repository.get_reporte_contador(db)
+    row = reports_repository.get_reporte_contador(db, periodo)
     return {"count": row.count, "ultima_generacion": row.ultima_generacion}
 
 
 @router.post("/generar")
 def generar_reporte(
+    request: Request,
     db: Annotated[Session, Depends(get_db)],
+    _permiso: Annotated[dict, Depends(require_permiso("VER_REPORTES"))],
     _admin: Annotated[dict, Depends(get_current_admin)],
 ):
+    log = LogActividadSistema(
+        id_usuario=_admin["user_id"],
+        accion_realizada="Reporte generado",
+        modulo_afectado="REPORTES",
+        ip_origen=request.client.host if request.client else "0.0.0.0",
+    )
+    db.add(log)
+    db.commit()
     return reports_repository.incrementar_reporte_contador(db)

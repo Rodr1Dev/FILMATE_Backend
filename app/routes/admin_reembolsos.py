@@ -1,11 +1,12 @@
 import logging
 from typing import Annotated, List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.orm import Session
 
-from app.core.dependencies import get_db
+from app.core.dependencies import get_db, require_permiso
 from app.repositories import reembolso_repository
+from app.models.log_actividad_sistema import LogActividadSistema
 from app.schemas.solicitud_reembolso import SolicitudReembolsoCreate, SolicitudReembolsoResponse, SolicitudReembolsoUpdate
 
 logger = logging.getLogger(__name__)
@@ -15,6 +16,7 @@ router = APIRouter(prefix="/admin/reembolsos", tags=["admin reembolsos"])
 @router.get("/", response_model=List[SolicitudReembolsoResponse])
 def list_solicitudes(
     db: Annotated[Session, Depends(get_db)],
+    _permiso: Annotated[dict, Depends(require_permiso("GESTIONAR_REEMBOLSOS"))],
     skip: Annotated[int, Query(ge=0)] = 0,
     limit: Annotated[int, Query(ge=1, le=100)] = 20,
     estado: Optional[str] = None,
@@ -23,12 +25,18 @@ def list_solicitudes(
 
 
 @router.get("/metricas")
-def get_metricas(db: Annotated[Session, Depends(get_db)]):
+def get_metricas(
+    db: Annotated[Session, Depends(get_db)],
+    _permiso: Annotated[dict, Depends(require_permiso("GESTIONAR_REEMBOLSOS"))],
+):
     return reembolso_repository.count_solicitudes_by_estado(db)
 
 
 @router.get("/{solicitud_id}", response_model=SolicitudReembolsoResponse, responses={404: {"description": "Solicitud no encontrada"}})
-def get_solicitud(solicitud_id: int, db: Annotated[Session, Depends(get_db)]):
+def get_solicitud(
+    solicitud_id: int, db: Annotated[Session, Depends(get_db)],
+    _permiso: Annotated[dict, Depends(require_permiso("GESTIONAR_REEMBOLSOS"))],
+):
     solicitud = reembolso_repository.get_solicitud(db, solicitud_id)
     if not solicitud:
         raise HTTPException(status_code=404, detail="Solicitud no encontrada")
@@ -36,7 +44,11 @@ def get_solicitud(solicitud_id: int, db: Annotated[Session, Depends(get_db)]):
 
 
 @router.put("/{solicitud_id}", response_model=SolicitudReembolsoResponse, responses={404: {"description": "Solicitud no encontrada"}})
-def resolve_solicitud(solicitud_id: int, payload: SolicitudReembolsoUpdate, db: Annotated[Session, Depends(get_db)]):
+def resolve_solicitud(
+    request: Request,
+    solicitud_id: int, payload: SolicitudReembolsoUpdate, db: Annotated[Session, Depends(get_db)],
+    _permiso: Annotated[dict, Depends(require_permiso("GESTIONAR_REEMBOLSOS"))],
+):
     solicitud = reembolso_repository.resolve_solicitud(
         db,
         solicitud_id,
@@ -45,15 +57,33 @@ def resolve_solicitud(solicitud_id: int, payload: SolicitudReembolsoUpdate, db: 
     )
     if not solicitud:
         raise HTTPException(status_code=404, detail="Solicitud no encontrada")
+    db.add(LogActividadSistema(
+        id_usuario=_permiso.get("user_id"),
+        accion_realizada=f"Reembolso {solicitud_id} resuelto: {payload.estado_solicitud}",
+        modulo_afectado="REEMBOLSOS",
+        ip_origen=request.client.host if request.client else "0.0.0.0",
+    ))
+    db.commit()
     return solicitud
 
 
 @router.post("/", response_model=SolicitudReembolsoResponse, status_code=201)
-def create_solicitud_admin(payload: SolicitudReembolsoCreate, db: Annotated[Session, Depends(get_db)]):
+def create_solicitud_admin(
+    request: Request,
+    payload: SolicitudReembolsoCreate, db: Annotated[Session, Depends(get_db)],
+    _permiso: Annotated[dict, Depends(require_permiso("GESTIONAR_REEMBOLSOS"))],
+):
     solicitud = reembolso_repository.create_solicitud(
         db, id_transaccion=payload.id_transaccion, motivo=payload.motivo,
         monto_reembolsado=payload.monto_reembolsado, tipo_reembolso=payload.tipo_reembolso,
     )
     if not solicitud:
         raise HTTPException(status_code=400, detail="No se pudo crear la solicitud")
+    db.add(LogActividadSistema(
+        id_usuario=_permiso.get("user_id"),
+        accion_realizada=f"Solicitud de reembolso creada: ID {solicitud.id_solicitud}",
+        modulo_afectado="REEMBOLSOS",
+        ip_origen=request.client.host if request.client else "0.0.0.0",
+    ))
+    db.commit()
     return solicitud
