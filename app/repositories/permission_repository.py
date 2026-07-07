@@ -34,6 +34,21 @@ def delete_permiso(db: Session, permiso_id: int) -> bool:
     return True
 
 
+def get_user_permisos(db: Session, user_id: int) -> List[str]:
+    from app.models.rol_permiso import RolPermiso
+    from app.models.usuario_rol import UsuarioRol
+
+    rows = (
+        db.query(Permiso.codigo_permiso)
+        .join(RolPermiso, RolPermiso.id_permiso == Permiso.id_permiso)
+        .join(UsuarioRol, UsuarioRol.id_role == RolPermiso.id_role)
+        .filter(UsuarioRol.id_usuario == user_id)
+        .distinct()
+        .all()
+    )
+    return [r[0] for r in rows]
+
+
 def user_has_permission(db: Session, user_id: int, codigo_permiso: str) -> bool:
     from app.models.permiso import Permiso
     from app.models.rol_permiso import RolPermiso
