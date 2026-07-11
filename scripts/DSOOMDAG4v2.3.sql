@@ -863,7 +863,7 @@ DROP PROCEDURE IF EXISTS pr_generar_cartelera_masiva //
 CREATE PROCEDURE pr_generar_cartelera_masiva()
 BEGIN
     DECLARE v_fecha_inicio DATE DEFAULT '2026-06-19';
-    DECLARE v_fecha_fin DATE DEFAULT '2026-07-03';
+    DECLARE v_fecha_fin DATE DEFAULT '2026-07-30';
     DECLARE v_fecha_actual DATE;
     DECLARE v_id_sala INT;
     DECLARE v_tipo_sala VARCHAR(20);
@@ -892,13 +892,27 @@ BEGIN
             ELSE SET v_precio = 15.00;
             END IF;
 
-            -- Función 1: Tarde (4:00 PM)
+            -- Función 1: 4:00 PM
             INSERT INTO funciones (id_pelicula, id_sala, fecha_hora, precio_base)
             VALUES (((v_pelicula_idx) % 13) + 1, v_id_sala, CONCAT(v_fecha_actual, ' 16:00:00'), v_precio);
-            
-            -- Función 2: Noche (8:30 PM)
+            -- Función 2: 5:00 PM
             INSERT INTO funciones (id_pelicula, id_sala, fecha_hora, precio_base)
-            VALUES (((v_pelicula_idx + 3) % 13) + 1, v_id_sala, CONCAT(v_fecha_actual, ' 20:30:00'), v_precio);
+            VALUES (((v_pelicula_idx + 2) % 13) + 1, v_id_sala, CONCAT(v_fecha_actual, ' 17:00:00'), v_precio);
+            -- Función 3: 6:00 PM
+            INSERT INTO funciones (id_pelicula, id_sala, fecha_hora, precio_base)
+            VALUES (((v_pelicula_idx + 4) % 13) + 1, v_id_sala, CONCAT(v_fecha_actual, ' 18:00:00'), v_precio);
+            -- Función 4: 6:30 PM
+            INSERT INTO funciones (id_pelicula, id_sala, fecha_hora, precio_base)
+            VALUES (((v_pelicula_idx + 6) % 13) + 1, v_id_sala, CONCAT(v_fecha_actual, ' 18:30:00'), v_precio);
+            -- Función 5: 7:00 PM
+            INSERT INTO funciones (id_pelicula, id_sala, fecha_hora, precio_base)
+            VALUES (((v_pelicula_idx + 8) % 13) + 1, v_id_sala, CONCAT(v_fecha_actual, ' 19:00:00'), v_precio);
+            -- Función 6: 8:00 PM
+            INSERT INTO funciones (id_pelicula, id_sala, fecha_hora, precio_base)
+            VALUES (((v_pelicula_idx + 10) % 13) + 1, v_id_sala, CONCAT(v_fecha_actual, ' 20:00:00'), v_precio);
+            -- Función 7: 8:30 PM
+            INSERT INTO funciones (id_pelicula, id_sala, fecha_hora, precio_base)
+            VALUES (((v_pelicula_idx + 12) % 13) + 1, v_id_sala, CONCAT(v_fecha_actual, ' 20:30:00'), v_precio);
 
             SET v_pelicula_idx = v_pelicula_idx + 1;
         END LOOP read_loop;
