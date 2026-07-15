@@ -7,7 +7,7 @@ import time
 import secrets
 
 
-SECRET_KEY = base64.b64encode(os.urandom(32)).decode("utf-8")
+SECRET_KEY = os.environ.get("SECRET_KEY") or base64.b64encode(os.urandom(32)).decode("utf-8")
 TOKEN_EXPIRE_HOURS = 24
 
 
