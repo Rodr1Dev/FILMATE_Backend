@@ -31,12 +31,19 @@ DB_USER = os.getenv("DB_USER")
 DB_PASSWORD = os.getenv("DB_PASSWORD")
 DB_NAME = os.getenv("DB_NAME")
 
+skip_connect = os.getenv("SKIP_DB_CONNECT", "0").lower() in ("1", "true", "yes")
+missing_db_config = not all([DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME])
+
 logger.info(f"🔗 Conectando a BD: {DB_USER}@{DB_HOST}:{DB_PORT}/{DB_NAME}")
 
 DATABASE_URL = (
     f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}"
     f"@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 )
+
+if skip_connect and missing_db_config:
+    DATABASE_URL = "sqlite:///:memory:"
+    logger.info("Usando SQLite en memoria para pruebas sin conexion a BD")
 
 # Crear el engine sin forzar la conexión. Algunas herramientas (p. ej. Sphinx)
 # importan los módulos del paquete; evitar probar la conexión en el import
