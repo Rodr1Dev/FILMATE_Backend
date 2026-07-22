@@ -65,6 +65,7 @@ def create_app() -> FastAPI:
         allow_origins=[
             "https://filmate-user-frontend.vercel.app",
             "https://filmate-admin-frontend.vercel.app",
+            "https://filmatecine.vercel.app",
         ],
         allow_credentials=True,
         allow_methods=["*"],
