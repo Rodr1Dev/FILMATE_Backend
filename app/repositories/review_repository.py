@@ -485,11 +485,18 @@ def get_trending_movies(db: Session, limit: int = 5, user_id: Optional[int] = No
         if movie_id in movies_with_functions:
             event_scores[movie_id] += 0.5
 
+    # Filtrar solo películas en cartelera (con funciones futuras)
+    event_scores = {
+        mid: score for mid, score in event_scores.items()
+        if mid in movies_with_functions
+    }
+
     if not event_scores:
         popular = (
             db.query(Pelicula.id_pelicula)
             .filter(
                 Pelicula.eliminado == False,
+                Pelicula.id_pelicula.in_(list(movies_with_functions)),
                 ~Pelicula.id_pelicula.in_(list(excluded_movie_ids)) if excluded_movie_ids else True,
             )
             .order_by(Pelicula.total_vistas_comunidad.desc())

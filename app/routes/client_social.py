@@ -2,6 +2,7 @@ import logging
 from typing import List, Optional, Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 
@@ -102,44 +103,58 @@ def get_feed(
 
     items = []
 
+    # Subqueries para contar likes, comentarios y liked_by_me (evita N+1)
+    likes_subq = (
+        db.query(
+            HistorialActividad.id_referencia_resena.label("review_id"),
+            func.count(HistorialActividad.id_actividad).label("likes")
+        )
+        .filter(HistorialActividad.tipo_evento == "LIKE_RESENA_RECIBIDO")
+        .group_by(HistorialActividad.id_referencia_resena)
+        .subquery()
+    )
+
+    comments_subq = (
+        db.query(
+            HistorialActividad.id_referencia_resena.label("review_id"),
+            func.count(HistorialActividad.id_actividad).label("comments")
+        )
+        .filter(HistorialActividad.tipo_evento == "COMENTARIO_RESENA")
+        .group_by(HistorialActividad.id_referencia_resena)
+        .subquery()
+    )
+
+    liked_by_me_subq = (
+        db.query(
+            HistorialActividad.id_referencia_resena.label("review_id"),
+            func.count(HistorialActividad.id_actividad).label("liked")
+        )
+        .filter(
+            HistorialActividad.tipo_evento == "LIKE_RESENA_RECIBIDO",
+            HistorialActividad.id_referencia_usuario == user_id,
+        )
+        .group_by(HistorialActividad.id_referencia_resena)
+        .subquery()
+    )
+
     if followed_ids:
         review_rows = (
-            db.query(Resena, Usuario, Pelicula)
+            db.query(Resena, Usuario, Pelicula, likes_subq.c.likes, comments_subq.c.comments, liked_by_me_subq.c.liked)
             .join(Usuario, Resena.id_usuario == Usuario.id_usuario)
             .join(Pelicula, Resena.id_pelicula == Pelicula.id_pelicula)
+            .outerjoin(likes_subq, likes_subq.c.review_id == Resena.id_resena)
+            .outerjoin(comments_subq, comments_subq.c.review_id == Resena.id_resena)
+            .outerjoin(liked_by_me_subq, liked_by_me_subq.c.review_id == Resena.id_resena)
             .filter(Resena.id_usuario.in_(followed_ids))
-            .order_by(Resena.fecha_publicacion.desc())
+            .order_by(
+                (func.coalesce(likes_subq.c.likes, 0) + func.coalesce(comments_subq.c.comments, 0)).desc(),
+                Resena.fecha_publicacion.desc()
+            )
             .limit(limit)
             .offset(offset)
             .all()
         )
-        for resena, usuario, pelicula in review_rows:
-            likes_count = (
-                db.query(HistorialActividad)
-                .filter(
-                    HistorialActividad.tipo_evento == "LIKE_RESENA_RECIBIDO",
-                    HistorialActividad.id_referencia_resena == resena.id_resena,
-                )
-                .count()
-            )
-            comments_count = (
-                db.query(HistorialActividad)
-                .filter(
-                    HistorialActividad.tipo_evento == "COMENTARIO_RESENA",
-                    HistorialActividad.id_referencia_resena == resena.id_resena,
-                )
-                .count()
-            )
-            liked_by_me = (
-                db.query(HistorialActividad)
-                .filter(
-                    HistorialActividad.tipo_evento == "LIKE_RESENA_RECIBIDO",
-                    HistorialActividad.id_referencia_resena == resena.id_resena,
-                    HistorialActividad.id_referencia_usuario == user_id,
-                )
-                .first()
-                is not None
-            )
+        for resena, usuario, pelicula, likes_count, comments_count, liked_by_me in review_rows:
             items.append({
                 "type": "review",
                 "id": resena.id_resena,
@@ -149,9 +164,9 @@ def get_feed(
                 "puntuacion_estrellas": resena.puntuacion_estrellas,
                 "comentario": resena.comentario,
                 "fecha": resena.fecha_publicacion.isoformat() if resena.fecha_publicacion else None,
-                "total_likes": likes_count,
-                "total_comentarios": comments_count,
-                "liked_by_me": liked_by_me,
+                "total_likes": likes_count or 0,
+                "total_comentarios": comments_count or 0,
+                "liked_by_me": bool(liked_by_me),
                 "pelicula": {
                     "id_pelicula": pelicula.id_pelicula,
                     "titulo": pelicula.titulo,
@@ -196,42 +211,22 @@ def get_feed(
     if not followed_ids or len(items) < limit:
         remaining = limit - len(items)
         popular_reviews = (
-            db.query(Resena, Usuario, Pelicula)
+            db.query(Resena, Usuario, Pelicula, likes_subq.c.likes, comments_subq.c.comments, liked_by_me_subq.c.liked)
             .join(Usuario, Resena.id_usuario == Usuario.id_usuario)
             .join(Pelicula, Resena.id_pelicula == Pelicula.id_pelicula)
-            .order_by(Resena.fecha_publicacion.desc())
+            .outerjoin(likes_subq, likes_subq.c.review_id == Resena.id_resena)
+            .outerjoin(comments_subq, comments_subq.c.review_id == Resena.id_resena)
+            .outerjoin(liked_by_me_subq, liked_by_me_subq.c.review_id == Resena.id_resena)
+            .order_by(
+                (func.coalesce(likes_subq.c.likes, 0) + func.coalesce(comments_subq.c.comments, 0)).desc(),
+                Resena.fecha_publicacion.desc()
+            )
             .limit(remaining)
             .all()
         )
-        for resena, usuario, pelicula in popular_reviews:
+        for resena, usuario, pelicula, likes_count, comments_count, liked_by_me in popular_reviews:
             if any(item.get("id") == resena.id_resena for item in items if item["type"] == "review"):
                 continue
-            likes_count = (
-                db.query(HistorialActividad)
-                .filter(
-                    HistorialActividad.tipo_evento == "LIKE_RESENA_RECIBIDO",
-                    HistorialActividad.id_referencia_resena == resena.id_resena,
-                )
-                .count()
-            )
-            comments_count = (
-                db.query(HistorialActividad)
-                .filter(
-                    HistorialActividad.tipo_evento == "COMENTARIO_RESENA",
-                    HistorialActividad.id_referencia_resena == resena.id_resena,
-                )
-                .count()
-            )
-            liked_by_me = (
-                db.query(HistorialActividad)
-                .filter(
-                    HistorialActividad.tipo_evento == "LIKE_RESENA_RECIBIDO",
-                    HistorialActividad.id_referencia_resena == resena.id_resena,
-                    HistorialActividad.id_referencia_usuario == user_id,
-                )
-                .first()
-                is not None
-            )
             items.append({
                 "type": "review",
                 "id": resena.id_resena,
@@ -241,9 +236,9 @@ def get_feed(
                 "puntuacion_estrellas": resena.puntuacion_estrellas,
                 "comentario": resena.comentario,
                 "fecha": resena.fecha_publicacion.isoformat() if resena.fecha_publicacion else None,
-                "total_likes": likes_count,
-                "total_comentarios": comments_count,
-                "liked_by_me": liked_by_me,
+                "total_likes": likes_count or 0,
+                "total_comentarios": comments_count or 0,
+                "liked_by_me": bool(liked_by_me),
                 "pelicula": {
                     "id_pelicula": pelicula.id_pelicula,
                     "titulo": pelicula.titulo,

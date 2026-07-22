@@ -37,6 +37,7 @@ DROP TABLE IF EXISTS peliculas_generos;
 DROP TABLE IF EXISTS generos;
 DROP TABLE IF EXISTS peliculas;
 DROP TABLE IF EXISTS seguidores;
+DROP TABLE IF EXISTS notificaciones_leidas;
 DROP TABLE IF EXISTS historial_actividad;
 DROP TABLE IF EXISTS tipos_documento;
 DROP TABLE IF EXISTS usuarios;
@@ -393,6 +394,17 @@ CREATE TABLE historial_actividad (
     texto_breve TEXT DEFAULT NULL,
     fecha_evento TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (id_usuario) REFERENCES usuarios (id_usuario) ON DELETE CASCADE
+);
+
+
+-- --- MÓDULO: NOTIFICACIONES LEÍDAS ---
+CREATE TABLE notificaciones_leidas (
+    id_usuario INT NOT NULL,
+    id_actividad INT NOT NULL,
+    fecha_lectura TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id_usuario, id_actividad),
+    FOREIGN KEY (id_usuario) REFERENCES usuarios(id_usuario) ON DELETE CASCADE,
+    FOREIGN KEY (id_actividad) REFERENCES historial_actividad(id_actividad) ON DELETE CASCADE
 );
 
 
