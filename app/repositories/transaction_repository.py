@@ -227,6 +227,43 @@ def validate_ticket_or_transaction(db: Session, codigo_qr_token: str = None, cod
     if not code:
         return {"valido": False, "estado": "Inválida"}
 
+    txn_match = re.match(r'^FILMATE-TXN-(\d+)$', code) or re.match(r'^FILMATE\|TXN:(\d+)\|', code)
+    if txn_match:
+        id_transaccion = int(txn_match.group(1))
+        tickets = db.query(BoletaTicket).filter(BoletaTicket.id_transaccion == id_transaccion).all()
+        if not tickets:
+            return {"valido": False, "estado": "Inválida"}
+
+        tickets_validos = [ticket for ticket in tickets if ticket.estado_ticket == "Valido"]
+        if not tickets_validos:
+            return {"valido": False, "estado": "Ya Usada"}
+
+        detalles_asientos = db.query(DetalleBoletaAsiento).filter(
+            DetalleBoletaAsiento.id_transaccion == id_transaccion
+        ).all()
+        for ticket in tickets_validos:
+            ticket.estado_ticket = "Canjeado"
+        for detalle in detalles_asientos:
+            detalle.ingresado = True
+        db.commit()
+
+        txn = db.query(Transaccion).filter(Transaccion.id_transaccion == id_transaccion).first()
+        usuario = db.query(Usuario).filter(Usuario.id_usuario == txn.id_usuario).first() if txn else None
+        seat_ids = [detalle.id_asiento for detalle in detalles_asientos]
+        asientos = db.query(Asiento).filter(Asiento.id_asiento.in_(seat_ids)).all() if seat_ids else []
+        asiento_lookup = {asiento.id_asiento: asiento for asiento in asientos}
+        asiento_labels = [
+            f"{asiento_lookup[detalle.id_asiento].fila}{asiento_lookup[detalle.id_asiento].columna}"
+            for detalle in detalles_asientos
+            if detalle.id_asiento in asiento_lookup
+        ]
+        return {
+            "valido": True, "estado": "Válida",
+            "detalle": {"id_transaccion": id_transaccion, "tickets": [ticket.id_ticket for ticket in tickets_validos]},
+            "cliente": usuario.nombre if usuario else '—',
+            "asiento": ', '.join(asiento_labels) if asiento_labels else '—',
+        }
+
     match = re.match(r'^QR-FILMATE-TXN(\d+)-(\d+)$', code)
     if match:
         id_transaccion = int(match.group(1))
